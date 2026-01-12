@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyFlow OS - Midnight Command</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap');
+        
+        :root {
+            --bg-primary: #020617;
+            --card-bg: #0f172a;
+            --neon-blue: #3b82f6;
+            --golden-yellow: #f59e0b;
+            --border-color: #1e293b;
+            --text-main: #94a3b8;
+            --header-text: #ffffff;
+            --grid-opacity: 0.1;
+        }
+
+        /* THEME: NEON GHOST (PURPLE) */
+        [data-theme='ghost'] {
+            --bg-primary: #0a000f;
+            --card-bg: #15001a;
+            --neon-blue: #bc00ff;
+            --golden-yellow: #00ffaa;
+            --border-color: #330044;
+            --text-main: #8a6096;
+            --header-text: #f0e0ff;
+            --grid-opacity: 0.15;
+        }
+
+        /* THEME: VANGUARD (RED RECON) */
+        [data-theme='vanguard'] {
+            --bg-primary: #0f0202;
+            --card-bg: #1a0505;
+            --neon-blue: #ff3e3e;
+            --golden-yellow: #ffffff;
+            --border-color: #441111;
+            --text-main: #966060;
+            --header-text: #ffe0e0;
+            --grid-opacity: 0.12;
+        }
+
+        /* THEME: DEEP SEA (EMERALD) */
+        [data-theme='deepsea'] {
+            --bg-primary: #000a08;
+            --card-bg: #001a14;
+            --neon-blue: #00ffaa;
+            --golden-yellow: #00a2ff;
+            --border-color: #00332a;
+            --text-main: #60968a;
+            --header-text: #e0fff7;
+            --grid-opacity: 0.15;
+        }
+
+        /* THEME C: CYBER RECON (CYAN) */
+        [data-theme='recon'] {
+            --bg-primary: #000a0a;
+            --card-bg: #001515;
+            --neon-blue: #00f2ff;
+            --golden-yellow: #ff00ea;
+            --border-color: #003333;
+            --text-main: #008f8f;
+            --header-text: #00f2ff;
+            --grid-opacity: 0.2;
+        }
+
+        body { 
+            font-family: 'Atkinson Hyperlegible Mono', monospace; 
+            background-color: var(--bg-primary); 
+            color: var(--text-main);
+            overflow-x: hidden;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            padding-bottom: 40px; 
+        }
+
+        body::after {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .mono-numeric {
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        .tactical-card { 
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: none; 
+        }
+
+        #objectiveCard {
+            border: 2px solid var(--golden-yellow);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .active-session-glow {
+            box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-color: var(--neon-blue);
+        }
+
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: var(--grid-opacity);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .hud-coord {
+            position: fixed; font-family: 'JetBrains Mono', monospace; font-size: 7px; opacity: 0.3; text-transform: uppercase; z-index: 50; pointer-events: none;
+        }
+
+        #objectiveCard::after {
+            content: "";
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .telemetry-label { font-size: 8px; color: var(--text-main); letter-spacing: 0.18em; font-weight: 500; text-transform: uppercase; }
+        
+        .burnout-indicator { 
+            color: var(--golden-yellow); 
+            font-weight: 800; 
+            margin-left: 6px;
+            padding-left: 6px;
+            border-left: 1px solid var(--border-color);
+            font-style: italic;
+        }
+
+        .payload-value { font-size: 1.5rem; font-weight: 800; color: var(--header-text); font-style: italic; letter-spacing: -0.02em; }
+        .tactical-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; }
+        
+        .hud-bracket { position: absolute; width: 10px; height: 10px; border-color: var(--border-color); z-index: 20; }
+        .tl { top: 5px; left: 5px; border-top: 2px solid; border-left: 2px solid; }
+        .tr { top: 5px; right: 5px; border-top: 2px solid; border-right: 2px solid; }
+        .bl { bottom: 5px; left: 5px; border-bottom: 2px solid; border-left: 2px solid; }
+        .br { bottom: 5px; right: 5px; border-bottom: 2px solid; border-right: 2px solid; }
+
+        .blink-status { animation: blink 1.5s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+            50% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
+            100% { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+        }
+        .defcon-active { animation: pulse-border 2s infinite ease-in-out; }
+
+        @keyframes radar-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        .lock-on-active { animation: radar-pulse 2s infinite; border: 1px solid rgba(245, 158, 11, 0.3); }
+        
+        @keyframes glitch-text {
+            0% { clip-path: inset(40% 0 61% 0); transform: translate(-2px, 2px); }
+            20% { clip-path: inset(92% 0 1% 0); transform: translate(1px, -1px); }
+            40% { clip-path: inset(43% 0 1% 0); transform: translate(-1px, 2px); }
+            60% { clip-path: inset(25% 0 58% 0); transform: translate(2px, 1px); }
+            80% { clip-path: inset(54% 0 7% 0); transform: translate(-2px, -2px); }
+            100% { clip-path: inset(58% 0 43% 0); transform: translate(2px, 1px); }
+        }
+        .target-glitch:hover { animation: glitch-text 0.2s infinite linear alternate-reverse; }
+
+        #subjectList { opacity: 0; transition: opacity 0.3s ease-in-out; }
+        #subjectList:hover { opacity: 1; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; position: relative; z-index: 20; }
+        .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; border: 1px solid var(--border-color); font-weight: 600; }
+        .today-marker { border: 1px solid var(--neon-blue) !important; background: rgba(59, 130, 246, 0.2); box-shadow: inset 0 0 8px var(--neon-blue); }
+        .target-marker { border: 2px solid var(--golden-yellow) !important; background: rgba(245, 158, 11, 0.3); box-shadow: inset 0 0 12px var(--golden-yellow); color: var(--golden-yellow); }
+
+        .mission-scanning {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(245, 158, 11, 0.05), transparent);
+            animation: scan 4s linear infinite; pointer-events: none; z-index: 6;
+        }
+        @keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+
+        input, select { background: var(--bg-primary) !important; border: 1px solid var(--border-color) !important; color: var(--header-text) !important; font-weight: 600; }
+
+        #timerDisplay { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-weight: 800; 
+            letter-spacing: -0.02em;
+            color: var(--header-text);
+        }
+
+        .theme-btn {
+            font-size: 8px;
+            padding: 2px 8px;
+            border: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .ticker-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 28px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        .ticker-content {
+            display: inline-block;
+            white-space: nowrap;
+            padding-right: 50px;
+            animation: ticker 35s linear infinite;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 8px;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(100%, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="hud-coord top-2 left-2">LAT: 34.0522 N</div>
+    <div class="hud-coord top-2 right-2">LNG: 118.2437 W</div>
+    <div class="hud-coord bottom-8 left-2">ALT: 1240m</div>
+    <div class="hud-coord bottom-8 right-2">SEC_OVRD: [ACTIVE]</div>
+
+    <div class="max-w-[1600px] mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-slate-800 pb-4 gap-4">
+            <div class="flex items-center gap-6">
+                <div>
+                    <div class="telemetry-label">SYSTEM_ACCESS_GRANTED</div>
+                    <h1 class="text-2xl font-extrabold text-white italic"><span class="text-blue-500 font-normal not-italic">USER:</span> EDWARD JOSHUA</h1>
+                </div>
+                <div class="flex flex-wrap gap-2 border-l border-slate-800 pl-6">
+                    <button onclick="setTheme('')" class="theme-btn hover:bg-slate-800">Midnight</button>
+                    <button onclick="setTheme('recon')" class="theme-btn hover:bg-cyan-900">Recon</button>
+                    <button onclick="setTheme('ghost')" class="theme-btn hover:bg-purple-900">Ghost</button>
+                    <button onclick="setTheme('vanguard')" class="theme-btn hover:bg-red-900">Vanguard</button>
+                    <button onclick="setTheme('deepsea')" class="theme-btn hover:bg-emerald-900">DeepSea</button>
+                </div>
+            </div>
+            <div class="flex gap-8 items-center">
+                <div class="text-right flex flex-col items-end">
+                    <div class="telemetry-label inline-block" id="loadLabel">NEURAL_LOAD<span class="burnout-indicator">BURNOUT_INDICATOR</span></div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="loadPercent" class="mono-numeric text-[10px] font-bold text-slate-400 italic">0%</span>
+                        <div class="w-full min-w-[140px] h-1 bg-slate-900 border border-slate-800"><div id="neuralLoadFill" class="h-full bg-blue-600 transition-all duration-1000"></div></div>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div id="defcon" class="px-4 py-1 border border-blue-500 text-blue-500 font-bold text-[10px] bg-blue-500/10 tracking-widest transition-all">DEFCON 5: NOT READY</div>
+                    <div class="telemetry-label mt-1 text-[7px] opacity-70">Standby Mode // Intel Only</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div class="md:col-span-3 space-y-6">
+                
+                <div class="tactical-card min-h-[220px] flex flex-col justify-center" id="objectiveCard">
+                    <div class="hud-bracket tl"></div><div class="hud-bracket tr"></div>
+                    <div class="hud-bracket bl"></div><div class="hud-bracket br"></div>
+                    <div class="mission-scanning"></div>
+                    <div class="z-10 px-4">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div id="missionStatusDot" class="w-2 h-2 rounded-full bg-slate-600"></div>
+                            <span id="missionStatusLabel" class="telemetry-label">No Target Acquired</span>
+                        </div>
+                        <div id="objectiveInputView" class="space-y-3">
+                            <input type="text" id="missionInput" placeholder="DESIGNATE OBJECTIVE..." class="w-full p-2 text-[10px] font-bold uppercase outline-none mb-1">
+                            <div class="flex flex-col gap-1">
+                                <span class="telemetry-label opacity-60" style="font-size: 7px;">Deadline Coordinate:</span>
+                                <input type="date" id="missionDateInput" class="w-full p-2 text-[10px] font-bold uppercase outline-none">
+                            </div>
+                            <button onclick="setMission()" class="w-full bg-amber-600/20 border border-amber-600/50 text-amber-500 py-2 font-extrabold text-[10px] hover:bg-amber-600 hover:text-black transition-all uppercase tracking-[0.2em]">Acquire Target</button>
+                        </div>
+                        <div id="objectiveDisplayView" class="hidden text-center cursor-pointer p-4 lock-on-active relative" onclick="resetMission()">
+                            <div class="absolute inset-0 border border-amber-500/20 scale-90 opacity-50"></div>
+                            <div id="bigObjectiveText" class="font-black italic uppercase leading-none text-amber-500 text-2xl target-glitch tracking-tighter"></div>
+                            <div class="mt-6 flex flex-col items-center">
+                                <div class="flex gap-4 mb-2">
+                                    <span class="mono-numeric text-[7px] text-amber-500/60 font-bold">[ TRK_LN: 88.42 ]</span>
+                                    <span id="targetDisplayDate" class="text-[7px] text-amber-500/60 font-bold">[ ETA: STDBY ]</span>
+                                </div>
+                                <span id="missionCountdown" class="text-[8px] text-amber-500 tracking-[0.4em] uppercase blink-status font-extrabold bg-amber-500/10 px-2 py-0.5">TARGET_LOCKED</span>
+                                <div class="w-24 h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sessionCard" class="tactical-card border-t-2 border-t-blue-500">
+                    <div class="telemetry-label mb-2">SUBJECT_ID</div>
+                    <select id="subjectSelect" class="w-full mb-4 p-2 text-xs font-bold uppercase outline-none"></select>
+                    <div id="timerDisplay" class="text-4xl font-black my-4 text-center tabular-nums">00:00:00:000</div>
+                    <button id="sessionBtn" onclick="toggleSession()" class="w-full bg-blue-600 text-white py-4 font-extrabold uppercase text-[10px] tracking-[0.3em] hover:bg-blue-500 transition-all">
+                        Initiate Session
+                    </button>
+                </div>
+
+                <div class="tactical-card">
+                    <div class="telemetry-label mb-3">UNIT_ENROLLMENT</div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="newSubjectInput" placeholder="UNIT_ID" class="flex-grow p-2 text-[10px] font-bold uppercase outline-none">
+                        <button onclick="addSubject()" class="px-3 bg-emerald-600/20 border border-emerald-600/40 text-emerald-500 font-extrabold">+</button>
+                    </div>
+                    <div id="subjectList" class="space-y-1 max-h-[150px] overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
+            <div class="md:col-span-6 space-y-6">
+                <div class="tactical-card h-[400px]">
+                    <div class="telemetry-label mb-4">INTEL_STREAM_7D</div>
+                    <div class="flex-grow relative h-[340px]"><canvas id="studyChart"></canvas></div>
+                </div>
+                <div class="tactical-card h-[280px]">
+                    <div class="telemetry-label mb-4">OPERATIONAL_HISTORY</div>
+                    <div id="historyFeed" class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto text-[9px] font-bold"></div>
+                </div>
+            </div>
+
+            <div class="md:col-span-3 space-y-6">
+                <div class="tactical-card bg-blue-900/10 border-blue-500/30">
+                    <div class="telemetry-label mb-1 text-blue-400">TOTAL_STUDY_TIME</div>
+                    <div id="totalTimeVal" class="mono-numeric payload-value">00H 00M</div>
+                </div>
+                <div id="subjectCards" class="grid gap-2 overflow-y-auto max-h-[180px]"></div>
+                
+                <div class="tactical-card">
+                    <div class="flex justify-between items-center mb-4 relative z-20">
+                        <div class="telemetry-label">OPS_CALENDAR</div>
+                        <div class="flex gap-2 items-center text-[10px] font-extrabold">
+                            <button onclick="changeMonth(-1)" class="hover:text-blue-500">◄</button>
+                            <span id="calendarMonthLabel"></span>
+                            <button onclick="changeMonth(1)" class="hover:text-blue-500">►</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid mb-1">
+                        <div class="text-center text-[8px] font-extrabold text-red-500/80">SUN</div>
+                        <div class="text-center text-[8px] font-extrabold text-slate-600">MON</div>
+                        <div class="text-center text-[8px] font-extrabold text-slate-600">TUE</div>
+                        <div class="text-center text-[8px] font-extrabold text-slate-600">WED</div>
+                        <div class="text-center text-[8px] font-extrabold text-slate-600">THU</div>
+                        <div class="text-center text-[8px] font-extrabold text-slate-600">FRI</div>
+                        <div class="text-center text-[8px] font-extrabold text-red-500/80">SAT</div>
+                    </div>
+                    <div id="calendarDays" class="calendar-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="ticker-footer">
+        <div class="ticker-content" id="telemetryTicker">
+            INITIALIZING_INTEL_STREAM... STANDBY...
+        </div>
+    </footer>
+
+    <script>
+        const PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+        let currentCalDate = new Date();
+        let subjects = JSON.parse(localStorage.getItem('studySubjects')) || { Physiology: { color: '#3b82f6' }, Anatomy: { color: '#10b981' } };
+        let studyData = JSON.parse(localStorage.getItem('studyLogs')) || [];
+        let historicalActions = JSON.parse(localStorage.getItem('historyActions')) || [];
+        let startTime = localStorage.getItem('startTime');
+        let activeSubject = localStorage.getItem('activeSubject');
+        let timerInterval, chartInstance = null;
+
+        function logAction(msg) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            historicalActions.unshift(`[${time}] ${msg}`);
+            if(historicalActions.length > 15) historicalActions.pop();
+            localStorage.setItem('historyActions', JSON.stringify(historicalActions));
+        }
+
+        function updateTicker() {
+            const ticker = document.getElementById('telemetryTicker');
+            const totalMins = studyData.reduce((a, b) => a + b.duration, 0);
+            const subCount = Object.keys(subjects).length;
+            const mission = localStorage.getItem('studyMission');
+            const targetDate = localStorage.getItem('targetAcquireDate');
+            
+            let missionIntel = mission ? `[ TARGET: ${mission} @ ${targetDate} ]` : `[ MISSION_ACTV: STDBY ]`;
+            let historyStream = historicalActions.slice(0, 5).join(" --- ");
+            
+            ticker.innerText = `${missionIntel} --- ${historyStream} --- [ TOTAL_COMBAT_TIME: ${Math.floor(totalMins/60)}H ${totalMins%60}M ] --- [ UNITS: ${subCount} ] --- [ SYSTEM_NOMINAL ] --- `;
+        }
+        setInterval(updateTicker, 5000);
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('studyTheme', theme);
+            renderChart();
+        }
+
+        const savedTheme = localStorage.getItem('studyTheme') || '';
+        setTheme(savedTheme);
+
+        function setMission() {
+            const v = document.getElementById('missionInput').value.trim();
+            const d = document.getElementById('missionDateInput').value;
+            if(v) { 
+                localStorage.setItem('studyMission', v.toUpperCase()); 
+                if(d) localStorage.setItem('targetAcquireDate', d);
+                logAction(`NEW_TARGET_ACQUIRED: ${v.toUpperCase()}`);
+                document.getElementById('missionStatusDot').className = 'w-2 h-2 rounded-full bg-amber-500 blink-status shadow-[0_0_8px_#f59e0b]';
+                document.getElementById('missionStatusLabel').innerText = 'TARGET_LOCKED_ENGAGED';
+                document.getElementById('missionStatusLabel').className = 'telemetry-label text-amber-500 font-extrabold italic';
+                updateTicker();
+                renderAll(); 
+            }
+        }
+        function resetMission() { 
+            const prev = localStorage.getItem('studyMission');
+            localStorage.removeItem('studyMission'); 
+            localStorage.removeItem('targetAcquireDate');
+            logAction(`TARGET_NEUTRALIZED: ${prev}`);
+            document.getElementById('missionStatusDot').className = 'w-2 h-2 rounded-full bg-slate-600';
+            document.getElementById('missionStatusLabel').innerText = 'No Target Acquired';
+            document.getElementById('missionStatusLabel').className = 'telemetry-label text-slate-500 font-medium';
+            updateTicker();
+            renderAll(); 
+        }
+
+        function addSubject() {
+            const input = document.getElementById('newSubjectInput');
+            const name = input.value.trim().toUpperCase();
+            if (name && !subjects[name]) {
+                subjects[name] = { color: PALETTE[Object.keys(subjects).length % PALETTE.length] };
+                localStorage.setItem('studySubjects', JSON.stringify(subjects));
+                logAction(`UNIT_ENROLLED: ${name}`);
+                input.value = '';
+                renderAll();
+                updateTicker();
+            }
+        }
+        function removeSubject(name) {
+            delete subjects[name];
+            localStorage.setItem('studySubjects', JSON.stringify(subjects));
+            logAction(`UNIT_DECOMMISSIONED: ${name}`);
+            renderAll();
+            updateTicker();
+        }
+
+        function toggleSession() {
+            const card = document.getElementById('sessionCard');
+            const defcon = document.getElementById('defcon');
+            if (!startTime) {
+                startTime = Date.now();
+                activeSubject = document.getElementById('subjectSelect').value;
+                localStorage.setItem('startTime', startTime);
+                localStorage.setItem('activeSubject', activeSubject);
+                logAction(`ENGAGING_UNIT: ${activeSubject}`);
+                card.classList.add('active-session-glow');
+                defcon.classList.add('defcon-active');
+                startTimer();
+            } else {
+                const mins = Math.round((Date.now() - startTime) / 60000);
+                if (mins >= 1) {
+                    studyData.push({ subject: activeSubject, duration: mins, date: new Date().toISOString().split('T')[0] });
+                    localStorage.setItem('studyLogs', JSON.stringify(studyData));
+                    logAction(`OPERATION_COMPLETE: ${activeSubject} (+${mins}M)`);
+                } else {
+                    logAction(`OPERATION_ABORTED: ${activeSubject}`);
+                }
+                localStorage.removeItem('startTime');
+                startTime = null;
+                clearInterval(timerInterval);
+                card.classList.remove('active-session-glow');
+                defcon.classList.remove('defcon-active');
+                document.getElementById('timerDisplay').innerText = "00:00:00:000";
+                document.getElementById('timerDisplay').style.color = 'var(--header-text)';
+            }
+            renderAll();
+            updateTicker();
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const e = Date.now() - startTime;
+                const h = String(Math.floor(e / 3600000)).padStart(2, '0');
+                const m = String(Math.floor(e / 60000) % 60).padStart(2, '0');
+                const s = String(Math.floor(e / 1000) % 60).padStart(2, '0');
+                const ms = String(e % 1000).padStart(3, '0');
+                document.getElementById('timerDisplay').innerText = `${h}:${m}:${s}:${ms}`;
+                document.getElementById('timerDisplay').style.color = 'var(--neon-blue)';
+                
+                const tDate = localStorage.getItem('targetAcquireDate');
+                if(tDate) {
+                    const diff = new Date(tDate + 'T23:59:59') - new Date();
+                    const countEl = document.getElementById('missionCountdown');
+                    if(diff > 0 && countEl) {
+                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const hh = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const mm = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        countEl.innerText = `ETA: ${d}D ${hh}H ${mm}M`;
+                    }
+                }
+            }, 37); 
+        }
+
+        function renderAll() {
+            const m = localStorage.getItem('studyMission');
+            const tDate = localStorage.getItem('targetAcquireDate');
+            document.getElementById('objectiveInputView').classList.toggle('hidden', !!m);
+            document.getElementById('objectiveDisplayView').classList.toggle('hidden', !m);
+            if(m) {
+                document.getElementById('bigObjectiveText').innerText = m;
+                document.getElementById('targetDisplayDate').innerText = tDate ? `[ ETA: ${tDate.split('-').slice(1).join('/')} ]` : `[ ETA: STDBY ]`;
+            }
+
+            if (startTime) {
+                document.getElementById('sessionCard').classList.add('active-session-glow');
+                document.getElementById('defcon').classList.add('defcon-active');
+                startTimer();
+            }
+
+            document.getElementById('subjectList').innerHTML = Object.keys(subjects).map(s => `
+                <div class="flex justify-between items-center bg-slate-900/10 p-2 border-l-2" style="border-color:${subjects[s].color}">
+                    <span class="text-[9px] font-bold uppercase">${s}</span>
+                    <button onclick="removeSubject('${s}')" class="text-slate-600 hover:text-red-500 text-[10px]">×</button>
+                </div>
+            `).join('');
+
+            const totalMins = studyData.reduce((a, b) => a + b.duration, 0);
+            document.getElementById('totalTimeVal').innerText = `${Math.floor(totalMins/60)}H ${totalMins%60}M`;
+            const today = new Date().toISOString().split('T')[0];
+            const dailyMins = studyData.filter(d => d.date === today).reduce((a, b) => a + b.duration, 0);
+            const loadPerc = Math.min((dailyMins / 480) * 100, 100);
+            document.getElementById('neuralLoadFill').style.width = loadPerc + '%';
+            document.getElementById('loadPercent').innerText = Math.round(loadPerc) + '%';
+
+            const isRunning = !!startTime;
+            const btn = document.getElementById('sessionBtn');
+            btn.innerText = isRunning ? "CEASE OPERATIONS" : "INITIATE SESSION";
+            btn.style.backgroundColor = isRunning ? '#ef4444' : 'var(--neon-blue)';
+            
+            document.getElementById('subjectSelect').innerHTML = Object.keys(subjects).map(s => `<option value="${s}" ${activeSubject === s ? 'selected' : ''}>${s}</option>`).join('');
+
+            document.getElementById('subjectCards').innerHTML = Object.keys(subjects).map(s => {
+                const total = studyData.filter(l => l.subject === s).reduce((a, b) => a + b.duration, 0);
+                return `
+                <div class="tactical-card flex flex-col justify-center" style="border-right: 2px solid ${subjects[s].color}; padding: 0.4rem;">
+                    <div class="telemetry-label" style="color:${subjects[s].color}; font-size: 7px;">${s}</div>
+                    <div class="mono-numeric font-extrabold italic text-xs" style="color:var(--header-text);">
+                        ${Math.floor(total/60)}H ${total%60}M
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('historyFeed').innerHTML = historicalActions.map(action => `
+                <div class="border-l border-slate-800 pl-2 py-1 opacity-80 hover:opacity-100 transition-opacity">
+                    <span class="text-blue-500/50 mr-1">></span> ${action}
+                </div>
+            `).join('');
+
+            renderCalendar();
+            renderChart();
+        }
+
+        function changeMonth(dir) {
+            currentCalDate.setMonth(currentCalDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendarDays');
+            if(!container) return;
+            container.innerHTML = '';
+            const y = currentCalDate.getFullYear(), m = currentCalDate.getMonth();
+            const todayStr = new Date().toISOString().split('T')[0];
+            const targetDate = localStorage.getItem('targetAcquireDate');
+
+            document.getElementById('calendarMonthLabel').innerText = `${["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][m]} ${y}`;
+            const firstDay = new Date(y, m, 1).getDay();
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            for (let x = 0; x < firstDay; x++) container.innerHTML += `<div class="calendar-day border-transparent opacity-0"></div>`;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const isWeekend = (new Date(y, m, i).getDay() === 0 || new Date(y, m, i).getDay() === 6);
+                const mins = studyData.filter(l => l.date === dStr).reduce((a, b) => a + b.duration, 0);
+                const bg = mins > 0 ? `rgba(59, 130, 246, ${Math.min(0.2 + (mins/240), 0.8)})` : 'transparent';
+                
+                let classes = "mono-numeric calendar-day";
+                if (isWeekend) classes += " text-red-500";
+                if (dStr === todayStr) classes += " today-marker";
+                if (targetDate && dStr === targetDate) classes += " target-marker";
+
+                container.innerHTML += `<div class="${classes}" style="background:${bg}">${i}</div>`;
+            }
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            
+            const last7Days = [...Array(7)].map((_, i) => {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                return d.toISOString().split('T')[0];
+            }).reverse();
+
+            const style = getComputedStyle(document.documentElement);
+            const mainColor = style.getPropertyValue('--neon-blue').trim();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map(d => d.split('-').slice(1).join('/')),
+                    datasets: [{
+                        label: 'MINUTES_ENGAGED',
+                        data: last7Days.map(d => studyData.filter(l => l.date === d).reduce((a,b) => a+b.duration, 0)),
+                        borderColor: mainColor,
+                        backgroundColor: mainColor + '20',
+                        fill: true,
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: mainColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: style.getPropertyValue('--border-color') },
+                            ticks: { font: { family: 'JetBrains Mono', size: 8 }, color: style.getPropertyValue('--text-main') }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { font: { family: 'JetBrains Mono', size: 8 }, color: style.getPropertyValue('--text-main') }
+                        }
+                    }
+                }
+            });
+        }
+
+        renderAll();
+    </script>
+</body>
+</html>
