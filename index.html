@@ -243,6 +243,26 @@
             0% { transform: translate3d(100%, 0, 0); }
             100% { transform: translate3d(-100%, 0, 0); }
         }
+
+        .log-entry {
+            display: grid;
+            grid-template-columns: 85px 100px 1fr;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding: 4px 8px;
+            animation: entry-slide 0.3s ease-out;
+            align-items: center;
+            position: relative;
+        }
+        .log-entry-latest {
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 2px solid var(--neon-blue);
+            box-shadow: inset 5px 0 10px -5px var(--neon-blue);
+        }
+        @keyframes entry-slide { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .log-time { color: var(--neon-blue); font-family: 'JetBrains Mono', monospace; font-size: 7px; }
+        .log-tag { font-size: 7px; font-weight: 900; letter-spacing: 0.1em; text-align: center; border: 1px solid currentColor; padding: 0 4px; width: fit-content; }
+        .log-msg { font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; padding-left: 8px; color: var(--text-main); }
+        .log-entry-latest .log-msg { color: var(--header-text); font-weight: 700; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -284,7 +304,6 @@
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div class="md:col-span-3 space-y-6">
-                
                 <div class="tactical-card min-h-[220px] flex flex-col justify-center" id="objectiveCard">
                     <div class="hud-bracket tl"></div><div class="hud-bracket tr"></div>
                     <div class="hud-bracket bl"></div><div class="hud-bracket br"></div>
@@ -303,7 +322,6 @@
                             <button onclick="setMission()" class="w-full bg-amber-600/20 border border-amber-600/50 text-amber-500 py-2 font-extrabold text-[10px] hover:bg-amber-600 hover:text-black transition-all uppercase tracking-[0.2em]">Acquire Target</button>
                         </div>
                         <div id="objectiveDisplayView" class="hidden text-center cursor-pointer p-4 lock-on-active relative" onclick="resetMission()">
-                            <div class="absolute inset-0 border border-amber-500/20 scale-90 opacity-50"></div>
                             <div id="bigObjectiveText" class="font-black italic uppercase leading-none text-amber-500 text-2xl target-glitch tracking-tighter"></div>
                             <div class="mt-6 flex flex-col items-center">
                                 <div class="flex gap-4 mb-2">
@@ -311,7 +329,6 @@
                                     <span id="targetDisplayDate" class="text-[7px] text-amber-500/60 font-bold">[ ETA: STDBY ]</span>
                                 </div>
                                 <span id="missionCountdown" class="text-[8px] text-amber-500 tracking-[0.4em] uppercase blink-status font-extrabold bg-amber-500/10 px-2 py-0.5">TARGET_LOCKED</span>
-                                <div class="w-24 h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent mt-3"></div>
                             </div>
                         </div>
                     </div>
@@ -321,9 +338,14 @@
                     <div class="telemetry-label mb-2">SUBJECT_ID</div>
                     <select id="subjectSelect" class="w-full mb-4 p-2 text-xs font-bold uppercase outline-none"></select>
                     <div id="timerDisplay" class="text-4xl font-black my-4 text-center tabular-nums">00:00:00:000</div>
-                    <button id="sessionBtn" onclick="toggleSession()" class="w-full bg-blue-600 text-white py-4 font-extrabold uppercase text-[10px] tracking-[0.3em] hover:bg-blue-500 transition-all">
-                        Initiate Session
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="sessionBtn" onclick="toggleSession()" class="flex-grow bg-blue-600 text-white py-4 font-extrabold uppercase text-[10px] tracking-[0.3em] hover:bg-blue-500 transition-all">
+                            Initiate
+                        </button>
+                        <button id="pauseBtn" onclick="togglePause()" class="hidden w-1/3 bg-slate-800 border border-slate-700 text-white py-4 font-extrabold uppercase text-[10px] tracking-[0.1em] hover:bg-slate-700 transition-all">
+                            Pause
+                        </button>
+                    </div>
                 </div>
 
                 <div class="tactical-card">
@@ -343,7 +365,7 @@
                 </div>
                 <div class="tactical-card h-[280px]">
                     <div class="telemetry-label mb-4">OPERATIONAL_HISTORY</div>
-                    <div id="historyFeed" class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto text-[9px] font-bold"></div>
+                    <div id="historyFeed" class="overflow-y-auto h-[220px]"></div>
                 </div>
             </div>
 
@@ -363,15 +385,6 @@
                             <button onclick="changeMonth(1)" class="hover:text-blue-500">►</button>
                         </div>
                     </div>
-                    <div class="calendar-grid mb-1">
-                        <div class="text-center text-[8px] font-extrabold text-red-500/80">SUN</div>
-                        <div class="text-center text-[8px] font-extrabold text-slate-600">MON</div>
-                        <div class="text-center text-[8px] font-extrabold text-slate-600">TUE</div>
-                        <div class="text-center text-[8px] font-extrabold text-slate-600">WED</div>
-                        <div class="text-center text-[8px] font-extrabold text-slate-600">THU</div>
-                        <div class="text-center text-[8px] font-extrabold text-slate-600">FRI</div>
-                        <div class="text-center text-[8px] font-extrabold text-red-500/80">SAT</div>
-                    </div>
                     <div id="calendarDays" class="calendar-grid"></div>
                 </div>
             </div>
@@ -379,9 +392,7 @@
     </div>
 
     <footer class="ticker-footer">
-        <div class="ticker-content" id="telemetryTicker">
-            INITIALIZING_INTEL_STREAM... STANDBY...
-        </div>
+        <div class="ticker-content" id="telemetryTicker">INITIALIZING_INTEL_STREAM... STANDBY...</div>
     </footer>
 
     <script>
@@ -390,30 +401,40 @@
         let subjects = JSON.parse(localStorage.getItem('studySubjects')) || { Physiology: { color: '#3b82f6' }, Anatomy: { color: '#10b981' } };
         let studyData = JSON.parse(localStorage.getItem('studyLogs')) || [];
         let historicalActions = JSON.parse(localStorage.getItem('historyActions')) || [];
-        let startTime = localStorage.getItem('startTime');
+        
+        let startTime = localStorage.getItem('startTime') ? parseInt(localStorage.getItem('startTime')) : null;
+        let accumulatedTime = localStorage.getItem('accumulatedTime') ? parseInt(localStorage.getItem('accumulatedTime')) : 0;
+        let isPaused = localStorage.getItem('isPaused') === 'true';
         let activeSubject = localStorage.getItem('activeSubject');
         let timerInterval, chartInstance = null;
 
-        function logAction(msg) {
-            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-            historicalActions.unshift(`[${time}] ${msg}`);
-            if(historicalActions.length > 15) historicalActions.pop();
+        function logAction(msg, tag = "SYS_INTEL") {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const date = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase();
+            const entry = { time: `${date} ${time}`, tag: tag.toUpperCase(), msg: msg.toUpperCase() };
+            historicalActions.unshift(entry);
+            if(historicalActions.length > 25) historicalActions.pop();
             localStorage.setItem('historyActions', JSON.stringify(historicalActions));
+            renderLogs();
+        }
+
+        function renderLogs() {
+            document.getElementById('historyFeed').innerHTML = historicalActions.map((a, idx) => `
+                <div class="log-entry ${idx === 0 ? 'log-entry-latest' : ''}">
+                    <span class="log-time">${a.time} ${idx === 0 ? '[LATEST]' : ''}</span>
+                    <span class="log-tag ${a.tag.includes('WARN') || a.tag.includes('ABORT') ? 'text-red-500 border-red-500' : (a.tag.includes('ACTV') ? 'text-blue-400 border-blue-400' : 'text-emerald-500 border-emerald-500')}">${a.tag}</span>
+                    <span class="log-msg">${a.msg}</span>
+                </div>
+            `).join('');
         }
 
         function updateTicker() {
             const ticker = document.getElementById('telemetryTicker');
             const totalMins = studyData.reduce((a, b) => a + b.duration, 0);
-            const subCount = Object.keys(subjects).length;
-            const mission = localStorage.getItem('studyMission');
-            const targetDate = localStorage.getItem('targetAcquireDate');
-            
-            let missionIntel = mission ? `[ TARGET: ${mission} @ ${targetDate} ]` : `[ MISSION_ACTV: STDBY ]`;
-            let historyStream = historicalActions.slice(0, 5).join(" --- ");
-            
-            ticker.innerText = `${missionIntel} --- ${historyStream} --- [ TOTAL_COMBAT_TIME: ${Math.floor(totalMins/60)}H ${totalMins%60}M ] --- [ UNITS: ${subCount} ] --- [ SYSTEM_NOMINAL ] --- `;
+            ticker.innerText = `[ TARGET: ${localStorage.getItem('studyMission') || 'STDBY'} ] --- [ TOTAL_TIME: ${Math.floor(totalMins/60)}H ${totalMins%60}M ] --- [ SYSTEM_NOMINAL ] --- `;
         }
-        setInterval(updateTicker, 5000);
+        setInterval(updateTicker, 10000);
 
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -421,32 +442,22 @@
             renderChart();
         }
 
-        const savedTheme = localStorage.getItem('studyTheme') || '';
-        setTheme(savedTheme);
-
         function setMission() {
             const v = document.getElementById('missionInput').value.trim();
             const d = document.getElementById('missionDateInput').value;
             if(v) { 
                 localStorage.setItem('studyMission', v.toUpperCase()); 
                 if(d) localStorage.setItem('targetAcquireDate', d);
-                logAction(`NEW_TARGET_ACQUIRED: ${v.toUpperCase()}`);
-                document.getElementById('missionStatusDot').className = 'w-2 h-2 rounded-full bg-amber-500 blink-status shadow-[0_0_8px_#f59e0b]';
-                document.getElementById('missionStatusLabel').innerText = 'TARGET_LOCKED_ENGAGED';
-                document.getElementById('missionStatusLabel').className = 'telemetry-label text-amber-500 font-extrabold italic';
-                updateTicker();
+                logAction(`NEW TARGET ACQUIRED: ${v}`, "OP_CMD");
                 renderAll(); 
             }
         }
+
         function resetMission() { 
             const prev = localStorage.getItem('studyMission');
             localStorage.removeItem('studyMission'); 
             localStorage.removeItem('targetAcquireDate');
-            logAction(`TARGET_NEUTRALIZED: ${prev}`);
-            document.getElementById('missionStatusDot').className = 'w-2 h-2 rounded-full bg-slate-600';
-            document.getElementById('missionStatusLabel').innerText = 'No Target Acquired';
-            document.getElementById('missionStatusLabel').className = 'telemetry-label text-slate-500 font-medium';
-            updateTicker();
+            logAction(`TARGET NEUTRALIZED: ${prev}`, "OP_CLR");
             renderAll(); 
         }
 
@@ -456,217 +467,145 @@
             if (name && !subjects[name]) {
                 subjects[name] = { color: PALETTE[Object.keys(subjects).length % PALETTE.length] };
                 localStorage.setItem('studySubjects', JSON.stringify(subjects));
-                logAction(`UNIT_ENROLLED: ${name}`);
+                logAction(`NEW UNIT ENROLLED: ${name}`, "RECON");
                 input.value = '';
                 renderAll();
-                updateTicker();
             }
         }
+
         function removeSubject(name) {
             delete subjects[name];
             localStorage.setItem('studySubjects', JSON.stringify(subjects));
-            logAction(`UNIT_DECOMMISSIONED: ${name}`);
+            logAction(`UNIT DECOMMISSIONED: ${name}`, "PURGE");
             renderAll();
-            updateTicker();
         }
 
         function toggleSession() {
-            const card = document.getElementById('sessionCard');
-            const defcon = document.getElementById('defcon');
-            if (!startTime) {
+            if (!startTime && !isPaused) {
                 startTime = Date.now();
+                accumulatedTime = 0;
                 activeSubject = document.getElementById('subjectSelect').value;
                 localStorage.setItem('startTime', startTime);
+                localStorage.setItem('accumulatedTime', 0);
                 localStorage.setItem('activeSubject', activeSubject);
-                logAction(`ENGAGING_UNIT: ${activeSubject}`);
-                card.classList.add('active-session-glow');
-                defcon.classList.add('defcon-active');
+                logAction(`ENGAGING UNIT: ${activeSubject}`, "ACTV_OP");
                 startTimer();
             } else {
-                const mins = Math.round((Date.now() - startTime) / 60000);
+                const totalElapsed = accumulatedTime + (isPaused ? 0 : (Date.now() - startTime));
+                const mins = Math.round(totalElapsed / 60000);
                 if (mins >= 1) {
                     studyData.push({ subject: activeSubject, duration: mins, date: new Date().toISOString().split('T')[0] });
                     localStorage.setItem('studyLogs', JSON.stringify(studyData));
-                    logAction(`OPERATION_COMPLETE: ${activeSubject} (+${mins}M)`);
+                    logAction(`OP COMPLETE: ${activeSubject} (+${mins}M)`, "INTEL_SVR");
                 } else {
-                    logAction(`OPERATION_ABORTED: ${activeSubject}`);
+                    logAction(`OP ABORTED: ${activeSubject} - DURATION_INSUFFICIENT`, "WARN");
                 }
-                localStorage.removeItem('startTime');
                 startTime = null;
+                accumulatedTime = 0;
+                isPaused = false;
+                localStorage.removeItem('startTime');
+                localStorage.removeItem('accumulatedTime');
+                localStorage.setItem('isPaused', false);
                 clearInterval(timerInterval);
-                card.classList.remove('active-session-glow');
-                defcon.classList.remove('defcon-active');
                 document.getElementById('timerDisplay').innerText = "00:00:00:000";
-                document.getElementById('timerDisplay').style.color = 'var(--header-text)';
             }
             renderAll();
-            updateTicker();
+        }
+
+        function togglePause() {
+            if (!startTime && !isPaused) return;
+            if (isPaused) {
+                startTime = Date.now();
+                isPaused = false;
+                logAction(`RESUMING OPERATION: ${activeSubject}`, "ACTV");
+                startTimer();
+            } else {
+                accumulatedTime += (Date.now() - startTime);
+                startTime = null;
+                isPaused = true;
+                clearInterval(timerInterval);
+                logAction(`OPERATION SUSPENDED: ${activeSubject}`, "PAUSE");
+            }
+            localStorage.setItem('startTime', startTime);
+            localStorage.setItem('accumulatedTime', accumulatedTime);
+            localStorage.setItem('isPaused', isPaused);
+            renderAll();
         }
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(() => {
-                const e = Date.now() - startTime;
+                const nowElapsed = startTime ? (Date.now() - startTime) : 0;
+                const e = accumulatedTime + nowElapsed;
                 const h = String(Math.floor(e / 3600000)).padStart(2, '0');
                 const m = String(Math.floor(e / 60000) % 60).padStart(2, '0');
                 const s = String(Math.floor(e / 1000) % 60).padStart(2, '0');
                 const ms = String(e % 1000).padStart(3, '0');
                 document.getElementById('timerDisplay').innerText = `${h}:${m}:${s}:${ms}`;
-                document.getElementById('timerDisplay').style.color = 'var(--neon-blue)';
-                
-                const tDate = localStorage.getItem('targetAcquireDate');
-                if(tDate) {
-                    const diff = new Date(tDate + 'T23:59:59') - new Date();
-                    const countEl = document.getElementById('missionCountdown');
-                    if(diff > 0 && countEl) {
-                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const hh = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                        const mm = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        countEl.innerText = `ETA: ${d}D ${hh}H ${mm}M`;
-                    }
-                }
             }, 37); 
         }
 
         function renderAll() {
             const m = localStorage.getItem('studyMission');
-            const tDate = localStorage.getItem('targetAcquireDate');
             document.getElementById('objectiveInputView').classList.toggle('hidden', !!m);
             document.getElementById('objectiveDisplayView').classList.toggle('hidden', !m);
             if(m) {
                 document.getElementById('bigObjectiveText').innerText = m;
-                document.getElementById('targetDisplayDate').innerText = tDate ? `[ ETA: ${tDate.split('-').slice(1).join('/')} ]` : `[ ETA: STDBY ]`;
+                document.getElementById('missionStatusDot').className = 'w-2 h-2 rounded-full bg-amber-500 blink-status';
+                document.getElementById('missionStatusLabel').innerText = 'TARGET_LOCKED';
             }
-
-            if (startTime) {
-                document.getElementById('sessionCard').classList.add('active-session-glow');
-                document.getElementById('defcon').classList.add('defcon-active');
-                startTimer();
-            }
-
-            document.getElementById('subjectList').innerHTML = Object.keys(subjects).map(s => `
-                <div class="flex justify-between items-center bg-slate-900/10 p-2 border-l-2" style="border-color:${subjects[s].color}">
-                    <span class="text-[9px] font-bold uppercase">${s}</span>
-                    <button onclick="removeSubject('${s}')" class="text-slate-600 hover:text-red-500 text-[10px]">×</button>
-                </div>
-            `).join('');
-
+            const isRunning = !!startTime || isPaused;
+            document.getElementById('sessionBtn').innerText = isRunning ? "DECOMMISSION" : "INITIATE";
+            document.getElementById('sessionBtn').className = isRunning ? 
+                "flex-grow bg-red-600/20 border border-red-600 text-red-500 py-4 font-extrabold uppercase text-[10px] tracking-[0.3em] hover:bg-red-600 hover:text-white transition-all" : 
+                "flex-grow bg-blue-600 text-white py-4 font-extrabold uppercase text-[10px] tracking-[0.3em] hover:bg-blue-500 transition-all";
+            document.getElementById('pauseBtn').classList.toggle('hidden', !isRunning);
+            document.getElementById('subjectList').innerHTML = Object.keys(subjects).map(s => `<div class="flex justify-between p-2 border-l-2" style="border-color:${subjects[s].color}"><span class="text-[9px] font-bold uppercase">${s}</span><button onclick="removeSubject('${s}')">×</button></div>`).join('');
+            document.getElementById('subjectSelect').innerHTML = Object.keys(subjects).map(s => `<option value="${s}" ${activeSubject === s ? 'selected' : ''}>${s}</option>`).join('');
             const totalMins = studyData.reduce((a, b) => a + b.duration, 0);
             document.getElementById('totalTimeVal').innerText = `${Math.floor(totalMins/60)}H ${totalMins%60}M`;
-            const today = new Date().toISOString().split('T')[0];
-            const dailyMins = studyData.filter(d => d.date === today).reduce((a, b) => a + b.duration, 0);
-            const loadPerc = Math.min((dailyMins / 480) * 100, 100);
-            document.getElementById('neuralLoadFill').style.width = loadPerc + '%';
-            document.getElementById('loadPercent').innerText = Math.round(loadPerc) + '%';
-
-            const isRunning = !!startTime;
-            const btn = document.getElementById('sessionBtn');
-            btn.innerText = isRunning ? "CEASE OPERATIONS" : "INITIATE SESSION";
-            btn.style.backgroundColor = isRunning ? '#ef4444' : 'var(--neon-blue)';
-            
-            document.getElementById('subjectSelect').innerHTML = Object.keys(subjects).map(s => `<option value="${s}" ${activeSubject === s ? 'selected' : ''}>${s}</option>`).join('');
-
-            document.getElementById('subjectCards').innerHTML = Object.keys(subjects).map(s => {
-                const total = studyData.filter(l => l.subject === s).reduce((a, b) => a + b.duration, 0);
-                return `
-                <div class="tactical-card flex flex-col justify-center" style="border-right: 2px solid ${subjects[s].color}; padding: 0.4rem;">
-                    <div class="telemetry-label" style="color:${subjects[s].color}; font-size: 7px;">${s}</div>
-                    <div class="mono-numeric font-extrabold italic text-xs" style="color:var(--header-text);">
-                        ${Math.floor(total/60)}H ${total%60}M
-                    </div>
-                </div>`;
-            }).join('');
-
-            document.getElementById('historyFeed').innerHTML = historicalActions.map(action => `
-                <div class="border-l border-slate-800 pl-2 py-1 opacity-80 hover:opacity-100 transition-opacity">
-                    <span class="text-blue-500/50 mr-1">></span> ${action}
-                </div>
-            `).join('');
-
             renderCalendar();
             renderChart();
         }
 
-        function changeMonth(dir) {
-            currentCalDate.setMonth(currentCalDate.getMonth() + dir);
-            renderCalendar();
-        }
+        function changeMonth(dir) { currentCalDate.setMonth(currentCalDate.getMonth() + dir); renderCalendar(); }
 
         function renderCalendar() {
             const container = document.getElementById('calendarDays');
-            if(!container) return;
             container.innerHTML = '';
             const y = currentCalDate.getFullYear(), m = currentCalDate.getMonth();
-            const todayStr = new Date().toISOString().split('T')[0];
-            const targetDate = localStorage.getItem('targetAcquireDate');
-
             document.getElementById('calendarMonthLabel').innerText = `${["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][m]} ${y}`;
             const firstDay = new Date(y, m, 1).getDay();
             const daysInMonth = new Date(y, m + 1, 0).getDate();
-            for (let x = 0; x < firstDay; x++) container.innerHTML += `<div class="calendar-day border-transparent opacity-0"></div>`;
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const isWeekend = (new Date(y, m, i).getDay() === 0 || new Date(y, m, i).getDay() === 6);
-                const mins = studyData.filter(l => l.date === dStr).reduce((a, b) => a + b.duration, 0);
-                const bg = mins > 0 ? `rgba(59, 130, 246, ${Math.min(0.2 + (mins/240), 0.8)})` : 'transparent';
-                
-                let classes = "mono-numeric calendar-day";
-                if (isWeekend) classes += " text-red-500";
-                if (dStr === todayStr) classes += " today-marker";
-                if (targetDate && dStr === targetDate) classes += " target-marker";
-
-                container.innerHTML += `<div class="${classes}" style="background:${bg}">${i}</div>`;
+            for (let i = 0; i < firstDay; i++) container.innerHTML += '<div></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                container.innerHTML += `<div class="calendar-day ${dateStr === new Date().toISOString().split('T')[0] ? 'today-marker' : ''}">${d}</div>`;
             }
         }
 
         function renderChart() {
             const ctx = document.getElementById('studyChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
-            
             const last7Days = [...Array(7)].map((_, i) => {
-                const d = new Date(); d.setDate(d.getDate() - i);
+                const d = new Date(); d.setDate(d.getDate() - (6 - i));
                 return d.toISOString().split('T')[0];
-            }).reverse();
-
-            const style = getComputedStyle(document.documentElement);
-            const mainColor = style.getPropertyValue('--neon-blue').trim();
-
+            });
+            const datasets = Object.keys(subjects).map(s => ({
+                label: s,
+                data: last7Days.map(date => studyData.filter(l => l.date === date && l.subject === s).reduce((a, b) => a + b.duration, 0)),
+                borderColor: subjects[s].color,
+                backgroundColor: subjects[s].color + '20',
+                fill: true, tension: 0.4
+            }));
             chartInstance = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: last7Days.map(d => d.split('-').slice(1).join('/')),
-                    datasets: [{
-                        label: 'MINUTES_ENGAGED',
-                        data: last7Days.map(d => studyData.filter(l => l.date === d).reduce((a,b) => a+b.duration, 0)),
-                        borderColor: mainColor,
-                        backgroundColor: mainColor + '20',
-                        fill: true,
-                        tension: 0.1,
-                        borderWidth: 2,
-                        pointRadius: 3,
-                        pointBackgroundColor: mainColor
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            grid: { color: style.getPropertyValue('--border-color') },
-                            ticks: { font: { family: 'JetBrains Mono', size: 8 }, color: style.getPropertyValue('--text-main') }
-                        },
-                        x: { 
-                            grid: { display: false },
-                            ticks: { font: { family: 'JetBrains Mono', size: 8 }, color: style.getPropertyValue('--text-main') }
-                        }
-                    }
-                }
+                data: { labels: last7Days.map(d => d.split('-').slice(1).join('/')), datasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 9 } } } }, scales: { y: { grid: { color: 'rgba(30, 41, 59, 0.5)' }, ticks: { color: '#64748b', font: { size: 8 } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 } } } } }
             });
         }
 
-        renderAll();
+        window.onload = () => { setTheme(localStorage.getItem('studyTheme') || ''); renderAll(); renderLogs(); };
     </script>
 </body>
 </html>
